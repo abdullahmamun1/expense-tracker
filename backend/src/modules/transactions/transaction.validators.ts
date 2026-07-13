@@ -22,3 +22,7 @@ export const transactionListQuerySchema = z.object({
   from: dateSchema.optional(),
   to: dateSchema.optional(),
 });
+
+export const suggestCategoryQuerySchema = z.object({
+  note: z.string().min(1, "Note is required").max(280),
+});

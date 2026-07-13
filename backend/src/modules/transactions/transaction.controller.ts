@@ -3,6 +3,7 @@ import {
   createTransactionSchema,
   updateTransactionSchema,
   transactionListQuerySchema,
+  suggestCategoryQuerySchema,
 } from "./transaction.validators.js";
 import { getUserId } from "../auth/auth.middleware.js";
 import { findOwnedWallet } from "../wallets/wallet.service.js";
@@ -13,6 +14,7 @@ import {
   findOwnedTransaction,
   listTransactions,
   updateTransaction,
+  suggestCategory,
 } from "./transaction.service.js";
 
 export async function list(req: Request, res: Response) {
@@ -22,6 +24,15 @@ export async function list(req: Request, res: Response) {
   }
   const transactions = await listTransactions(getUserId(req), parsed.data);
   res.status(200).json(transactions);
+}
+
+export async function suggest(req: Request, res: Response) {
+  const parsed = suggestCategoryQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({ message: "Invalid query parameters" });
+  }
+  const categoryId = await suggestCategory(getUserId(req), parsed.data.note);
+  res.status(200).json({ categoryId });
 }
 
 export async function create(req: Request, res: Response) {

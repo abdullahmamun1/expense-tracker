@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useEffect, useRef, useState } from "react";
+import { useForm, Controller, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -42,10 +43,15 @@ export function TransactionForm({
 }: TransactionFormProps) {
   const isEdit = !!transaction;
   const [formError, setFormError] = useState<string | null>(null);
+  const [suggestedCategoryId, setSuggestedCategoryId] = useState<string | null>(null);
+  const categoryTouchedRef = useRef(false);
+  const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requestIdRef = useRef(0);
   const {
     register,
     handleSubmit,
     control,
+    setValue,
     formState: { errors, isSubmitting },
   } = useForm<TransactionFormValues>({
     resolver: zodResolver(transactionFormSchema),
@@ -65,6 +71,44 @@ export function TransactionForm({
           note: "",
         },
   });
+
+  const noteField = register("note");
+  const categoryIdValue = useWatch({ control, name: "categoryId" });
+  const suggestedCategory = suggestedCategoryId
+    ? (categories.find((category) => category.id === suggestedCategoryId) ?? null)
+    : null;
+
+  useEffect(() => {
+    return () => {
+      if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+    };
+  }, []);
+
+  function handleNoteChange(event: React.ChangeEvent<HTMLInputElement>) {
+    if (debounceTimerRef.current) clearTimeout(debounceTimerRef.current);
+
+    const editModeBlocked = isEdit && categoryIdValue !== "";
+    if (categoryTouchedRef.current || editModeBlocked) return;
+
+    const note = event.target.value.trim();
+    if (!note) {
+      setSuggestedCategoryId(null);
+      return;
+    }
+
+    debounceTimerRef.current = setTimeout(() => {
+      const requestId = ++requestIdRef.current;
+      transactionsApi
+        .suggestCategory(note)
+        .then((res) => (res.ok ? res.json() : Promise.resolve(null)))
+        .then((body: { categoryId: string | null } | null) => {
+          if (requestId !== requestIdRef.current) return;
+          if (categoryTouchedRef.current) return;
+          setSuggestedCategoryId(body?.categoryId ?? null);
+        })
+        .catch(() => {});
+    }, 400);
+  }
 
   async function onSubmit(values: TransactionFormValues) {
     setFormError(null);
@@ -116,9 +160,63 @@ export function TransactionForm({
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
-          Category
-        </Label>
+        <div className="flex items-center justify-between gap-2">
+          <Label className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
+            Category
+          </Label>
+          {isEdit && categoryIdValue !== "" && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              className="rounded-none font-mono text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground"
+              onClick={() => {
+                categoryTouchedRef.current = false;
+                setSuggestedCategoryId(null);
+                setValue("categoryId", "", { shouldDirty: true });
+              }}
+            >
+              Clear category
+            </Button>
+          )}
+        </div>
+
+        {suggestedCategory && (
+          <div className="flex items-center justify-between gap-2 border border-dashed border-border bg-muted/40 px-3 py-1.5">
+            <p className="font-mono text-xs text-muted-foreground">
+              Suggested: <span className="text-foreground">{suggestedCategory.name}</span>
+            </p>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="ghost"
+                size="xs"
+                className="rounded-none font-mono text-[0.65rem] uppercase tracking-[0.16em]"
+                onClick={() => {
+                  setValue("categoryId", suggestedCategory.id, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                  });
+                  categoryTouchedRef.current = true;
+                  setSuggestedCategoryId(null);
+                }}
+              >
+                Use
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-xs"
+                aria-label="Dismiss suggestion"
+                className="rounded-none"
+                onClick={() => setSuggestedCategoryId(null)}
+              >
+                <X className="size-3" />
+              </Button>
+            </div>
+          </div>
+        )}
+
         <Controller
           control={control}
           name="categoryId"
@@ -126,7 +224,11 @@ export function TransactionForm({
             <Select
               items={Object.fromEntries(categories.map((category) => [category.id, category.name]))}
               value={field.value}
-              onValueChange={field.onChange}
+              onValueChange={(value) => {
+                field.onChange(value);
+                categoryTouchedRef.current = true;
+                setSuggestedCategoryId(null);
+              }}
             >
               <SelectTrigger className="w-full rounded-none border-0 border-b border-border bg-transparent px-0">
                 <SelectValue placeholder="Select a category" />
@@ -196,7 +298,11 @@ export function TransactionForm({
           id="note"
           aria-invalid={!!errors.note}
           className="rounded-none border-0 border-b border-border bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary"
-          {...register("note")}
+          {...noteField}
+          onChange={(event) => {
+            noteField.onChange(event);
+            handleNoteChange(event);
+          }}
         />
         {errors.note && <p className="font-mono text-xs text-destructive">{errors.note.message}</p>}
       </div>

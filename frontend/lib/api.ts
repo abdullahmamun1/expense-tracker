@@ -67,4 +67,6 @@ export const transactionsApi = {
   update: (id: string, data: Partial<TransactionData>) =>
     apiFetch(`/api/transactions/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   remove: (id: string) => apiFetch(`/api/transactions/${id}`, { method: "DELETE" }),
+  suggestCategory: (note: string) =>
+    apiFetch(`/api/transactions/suggest-category?note=${encodeURIComponent(note)}`),
 };

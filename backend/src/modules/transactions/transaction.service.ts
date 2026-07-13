@@ -5,6 +5,7 @@ import type {
   transactionListQuerySchema,
 } from "./transaction.validators.js";
 import { z } from "zod";
+import { findOwnedCategory } from "../categories/category.service.js";
 
 type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
@@ -69,4 +70,52 @@ export async function deleteTransaction(id: string, userId: string) {
   if (!transaction) return null;
   await prisma.transaction.delete({ where: { id } });
   return transaction;
+}
+
+function tokenize(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((token) => token.length >= 3);
+}
+
+export async function suggestCategory(userId: string, note: string): Promise<string | null> {
+  const queryTokens = new Set(tokenize(note));
+  if (queryTokens.size === 0) return null;
+
+  const transactions = await prisma.transaction.findMany({
+    where: { userId, note: { not: null } },
+    select: { note: true, categoryId: true },
+  });
+
+  const scores = new Map<string, number>();
+  for (const transaction of transactions) {
+    if (!transaction.note) continue;
+    const noteTokens = new Set(tokenize(transaction.note));
+    let matchCount = 0;
+    for (const token of queryTokens) {
+      if (noteTokens.has(token)) matchCount++;
+    }
+    if (matchCount > 0) {
+      scores.set(transaction.categoryId, (scores.get(transaction.categoryId) ?? 0) + matchCount);
+    }
+  }
+  if (scores.size === 0) return null;
+
+  let bestCategoryId: string | null = null;
+  let bestScore = -1;
+  let tie = false;
+  for (const [categoryId, score] of scores) {
+    if (score > bestScore) {
+      bestScore = score;
+      bestCategoryId = categoryId;
+      tie = false;
+    } else if (score === bestScore) {
+      tie = true;
+    }
+  }
+  if (tie || !bestCategoryId) return null;
+
+  const category = await findOwnedCategory(bestCategoryId, userId);
+  return category ? bestCategoryId : null;
 }
