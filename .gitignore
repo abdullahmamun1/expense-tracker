@@ -1,0 +1,30 @@
+# dependencies
+node_modules/
+
+# env files (never commit secrets; .env.example files are fine)
+.env
+.env.local
+.env*.local
+
+# next.js (frontend)
+frontend/.next/
+frontend/out/
+next-env.d.ts
+
+# backend build output / generated code
+backend/dist/
+backend/generated/
+
+# misc
+.DS_Store
+*.pem
+*.tsbuildinfo
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.vercel
+
+# claude code local/session state (machine-specific, not project config)
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
