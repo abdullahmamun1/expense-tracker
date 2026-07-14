@@ -70,3 +70,17 @@ export const transactionsApi = {
   suggestCategory: (note: string) =>
     apiFetch(`/api/transactions/suggest-category?note=${encodeURIComponent(note)}`),
 };
+
+export const dashboardApi = {
+  summary: () => apiFetch("/api/dashboard/summary"),
+};
+
+export const budgetsApi = {
+  list: () => apiFetch("/api/budgets"),
+  create: (data: { categoryId: string; monthlyLimit: string }) =>
+    apiFetch("/api/budgets", { method: "POST", body: JSON.stringify(data) }),
+  get: (id: string) => apiFetch(`/api/budgets/${id}`),
+  update: (id: string, data: Partial<{ monthlyLimit: string }>) =>
+    apiFetch(`/api/budgets/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  remove: (id: string) => apiFetch(`/api/budgets/${id}`, { method: "DELETE" }),
+};

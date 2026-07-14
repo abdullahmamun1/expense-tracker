@@ -30,7 +30,7 @@ export function SignupForm() {
       return;
     }
     await refresh();
-    router.push("/");
+    router.push("/dashboard");
   }
 
   return (

@@ -13,41 +13,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { walletsApi } from "@/lib/api";
-import {
-  walletFormSchema,
-  walletTypes,
-  walletTypeLabels,
-  type WalletFormValues,
-  type Wallet,
-} from "@/lib/validation/wallet";
+import { budgetsApi } from "@/lib/api";
+import { budgetFormSchema, type BudgetFormValues, type Budget } from "@/lib/validation/budget";
+import type { Category } from "@/lib/validation/category";
 
-type WalletFormProps = {
-  wallet?: Wallet;
+type BudgetFormProps = {
+  budget?: Budget;
+  categories: Category[];
   onSuccess: () => void;
   onCancel: () => void;
 };
 
-export function WalletForm({ wallet, onSuccess, onCancel }: WalletFormProps) {
-  const isEdit = !!wallet;
+export function BudgetForm({ budget, categories, onSuccess, onCancel }: BudgetFormProps) {
+  const isEdit = !!budget;
   const [formError, setFormError] = useState<string | null>(null);
   const {
     register,
     handleSubmit,
     control,
     formState: { errors, isSubmitting },
-  } = useForm<WalletFormValues>({
-    resolver: zodResolver(walletFormSchema),
-    defaultValues: wallet
-      ? { name: wallet.name, type: wallet.type, startingBalance: wallet.startingBalance }
-      : { name: "", type: "CASH", startingBalance: "" },
+  } = useForm<BudgetFormValues>({
+    resolver: zodResolver(budgetFormSchema),
+    defaultValues: budget
+      ? { categoryId: budget.categoryId, monthlyLimit: budget.monthlyLimit }
+      : { categoryId: categories[0]?.id ?? "", monthlyLimit: "" },
   });
 
-  async function onSubmit(values: WalletFormValues) {
+  async function onSubmit(values: BudgetFormValues) {
     setFormError(null);
     const res = isEdit
-      ? await walletsApi.update(wallet.id, values)
-      : await walletsApi.create(values);
+      ? await budgetsApi.update(budget.id, { monthlyLimit: values.monthlyLimit })
+      : await budgetsApi.create(values);
     if (!res.ok) {
       const body = await res.json().catch(() => null);
       setFormError(body?.message ?? "Something went wrong. Please try again.");
@@ -62,73 +58,52 @@ export function WalletForm({ wallet, onSuccess, onCancel }: WalletFormProps) {
       className="flex flex-col gap-5 border border-dashed border-border p-6"
     >
       <div className="flex flex-col gap-1.5">
-        <Label
-          htmlFor="name"
-          className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground"
-        >
-          Name
-        </Label>
-        <Input
-          id="name"
-          aria-invalid={!!errors.name}
-          className="rounded-none border-0 border-b border-border bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary"
-          {...register("name")}
-        />
-        {errors.name && (
-          <p className="font-mono text-xs text-destructive">{errors.name.message}</p>
-        )}
-      </div>
-
-      <div className="flex flex-col gap-1.5">
         <Label className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground">
-          Type
+          Category
         </Label>
         <Controller
           control={control}
-          name="type"
+          name="categoryId"
           render={({ field }) => (
             <Select
-              items={Object.fromEntries(walletTypes.map((type) => [type, walletTypeLabels[type]]))}
+              items={Object.fromEntries(categories.map((category) => [category.id, category.name]))}
               value={field.value}
               onValueChange={field.onChange}
+              disabled={isEdit}
             >
               <SelectTrigger className="w-full rounded-none border-0 border-b border-border bg-transparent px-0">
-                <SelectValue placeholder="Select a type" />
+                <SelectValue placeholder="Select a category" />
               </SelectTrigger>
               <SelectContent>
-                {walletTypes.map((type) => (
-                  <SelectItem key={type} value={type}>
-                    {walletTypeLabels[type]}
+                {categories.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           )}
         />
-        {errors.type && (
-          <p className="font-mono text-xs text-destructive">{errors.type.message}</p>
+        {errors.categoryId && (
+          <p className="font-mono text-xs text-destructive">{errors.categoryId.message}</p>
         )}
       </div>
 
       <div className="flex flex-col gap-1.5">
         <Label
-          htmlFor="startingBalance"
+          htmlFor="monthlyLimit"
           className="font-mono text-[0.7rem] uppercase tracking-[0.16em] text-muted-foreground"
         >
-          Starting balance
+          Monthly limit
         </Label>
         <Input
-          id="startingBalance"
-          inputMode="decimal"
-          placeholder="0.00"
-          aria-invalid={!!errors.startingBalance}
+          id="monthlyLimit"
+          aria-invalid={!!errors.monthlyLimit}
           className="rounded-none border-0 border-b border-border bg-transparent px-0 focus-visible:ring-0 focus-visible:border-primary"
-          {...register("startingBalance")}
+          {...register("monthlyLimit")}
         />
-        {errors.startingBalance && (
-          <p className="font-mono text-xs text-destructive">
-            {errors.startingBalance.message}
-          </p>
+        {errors.monthlyLimit && (
+          <p className="font-mono text-xs text-destructive">{errors.monthlyLimit.message}</p>
         )}
       </div>
 
@@ -140,7 +115,7 @@ export function WalletForm({ wallet, onSuccess, onCancel }: WalletFormProps) {
           disabled={isSubmitting}
           className="h-10 rounded-none font-mono text-xs uppercase tracking-[0.16em]"
         >
-          {isSubmitting ? "Saving…" : isEdit ? "Save changes" : "Add wallet"}
+          {isSubmitting ? "Saving…" : isEdit ? "Save changes" : "Add budget"}
         </Button>
         <Button
           type="button"

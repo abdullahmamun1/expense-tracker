@@ -89,7 +89,11 @@ export function CategoryForm({ category, onSuccess, onCancel }: CategoryFormProp
           control={control}
           name="type"
           render={({ field }) => (
-            <Select value={field.value} onValueChange={field.onChange}>
+            <Select
+              items={Object.fromEntries(categoryTypes.map((type) => [type, categoryTypeLabels[type]]))}
+              value={field.value}
+              onValueChange={field.onChange}
+            >
               <SelectTrigger className="w-full rounded-none border-0 border-b border-border bg-transparent px-0">
                 <SelectValue placeholder="Select a type" />
               </SelectTrigger>
