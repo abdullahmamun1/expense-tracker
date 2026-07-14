@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { budgetsApi, categoriesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { BudgetForm } from "./budget-form";
@@ -11,7 +10,11 @@ import type { Category } from "@/lib/validation/category";
 
 type Status = "loading" | "ready" | "error";
 
-export function BudgetList() {
+type BudgetListProps = {
+  onNavigateToCategories: () => void;
+};
+
+export function BudgetList({ onNavigateToCategories }: BudgetListProps) {
   const [budgets, setBudgets] = useState<Budget[]>([]);
   const [expenseCategories, setExpenseCategories] = useState<Category[]>([]);
   const [status, setStatus] = useState<Status>("loading");
@@ -70,9 +73,9 @@ export function BudgetList() {
     return (
       <p className="border-y border-dashed border-border py-14 text-center font-serif text-lg text-muted-foreground">
         You need an expense category before you can set a budget.{" "}
-        <Link href="/categories" className="text-primary underline">
+        <button type="button" onClick={onNavigateToCategories} className="text-primary underline">
           Create one first
-        </Link>
+        </button>
         .
       </p>
     );

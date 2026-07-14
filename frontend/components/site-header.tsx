@@ -7,18 +7,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 
 const navLinkClass = "font-mono text-xs uppercase tracking-[0.14em] hover:text-primary";
+const bigButtonClass = "h-10 rounded-none px-5 font-mono text-xs uppercase tracking-[0.14em]";
 
-const authenticatedLinks = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/wallets", label: "Wallets" },
-  { href: "/categories", label: "Categories" },
-  { href: "/transactions", label: "Transactions" },
-  { href: "/budgets", label: "Budgets" },
-];
+const authenticatedLinks = [{ href: "/profile", label: "Profile" }];
 
 export function SiteHeader() {
   const { user, status, logout } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
+  const greeting = user ? (user.lastName ? `Hi, ${user.lastName}` : user.email) : "";
 
   return (
     <header className="w-full border-b border-border">
@@ -43,14 +39,16 @@ export function SiteHeader() {
                 </Link>
               ))}
               <span className="hidden font-mono text-xs uppercase tracking-wide text-muted-foreground xl:inline">
-                {user?.email}
+                {greeting}
               </span>
               <Button
-                variant="outline"
-                size="sm"
-                onClick={() => logout()}
-                className="rounded-none font-mono text-xs uppercase tracking-[0.14em]"
+                nativeButton={false}
+                className={bigButtonClass}
+                render={<Link href="/dashboard" />}
               >
+                Dashboard
+              </Button>
+              <Button variant="outline" onClick={() => logout()} className={bigButtonClass}>
                 Log out
               </Button>
             </div>
@@ -59,12 +57,7 @@ export function SiteHeader() {
               <Link href="/login" className={navLinkClass}>
                 Log in
               </Link>
-              <Button
-                size="sm"
-                nativeButton={false}
-                className="rounded-none font-mono text-xs uppercase tracking-[0.14em]"
-                render={<Link href="/signup" />}
-              >
+              <Button nativeButton={false} className={bigButtonClass} render={<Link href="/signup" />}>
                 Sign up
               </Button>
             </div>
@@ -102,16 +95,23 @@ export function SiteHeader() {
                   </Link>
                 ))}
                 <span className="font-mono text-xs uppercase tracking-wide text-muted-foreground">
-                  {user?.email}
+                  {greeting}
                 </span>
                 <Button
+                  nativeButton={false}
+                  onClick={() => setMenuOpen(false)}
+                  className={`w-fit ${bigButtonClass}`}
+                  render={<Link href="/dashboard" />}
+                >
+                  Dashboard
+                </Button>
+                <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => {
                     setMenuOpen(false);
                     logout();
                   }}
-                  className="w-fit rounded-none font-mono text-xs uppercase tracking-[0.14em]"
+                  className={`w-fit ${bigButtonClass}`}
                 >
                   Log out
                 </Button>
@@ -122,10 +122,9 @@ export function SiteHeader() {
                   Log in
                 </Link>
                 <Button
-                  size="sm"
                   nativeButton={false}
                   onClick={() => setMenuOpen(false)}
-                  className="w-fit rounded-none font-mono text-xs uppercase tracking-[0.14em]"
+                  className={`w-fit ${bigButtonClass}`}
                   render={<Link href="/signup" />}
                 >
                   Sign up

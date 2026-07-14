@@ -21,6 +21,19 @@ export const authApi = {
     }),
   logout: () => apiFetch("/api/auth/logout", { method: "POST" }),
   me: () => apiFetch("/api/auth/me"),
+  updateProfile: (data: {
+    email?: string;
+    newPassword?: string;
+    currentPassword?: string;
+    firstName?: string;
+    lastName?: string;
+    phone?: string;
+    address?: string;
+    dateOfBirth?: string;
+    bio?: string;
+  }) => apiFetch("/api/auth/me", { method: "PATCH", body: JSON.stringify(data) }),
+  deleteAccount: (currentPassword: string) =>
+    apiFetch("/api/auth/me", { method: "DELETE", body: JSON.stringify({ currentPassword }) }),
 };
 
 export const walletsApi = {

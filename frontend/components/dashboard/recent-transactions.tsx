@@ -1,24 +1,25 @@
-import Link from "next/link";
 import { cn } from "@/lib/utils";
 import type { Transaction } from "@/lib/validation/transaction";
 
 type RecentTransactionsProps = {
   transactions: Transaction[];
+  onViewAll: () => void;
 };
 
-export function RecentTransactions({ transactions }: RecentTransactionsProps) {
+export function RecentTransactions({ transactions, onViewAll }: RecentTransactionsProps) {
   return (
     <div>
       <div className="mb-4 flex items-center justify-between gap-4">
         <p className="font-mono text-xs uppercase tracking-[0.18em] text-muted-foreground">
           Recent transactions
         </p>
-        <Link
-          href="/transactions"
+        <button
+          type="button"
+          onClick={onViewAll}
           className="font-mono text-xs uppercase tracking-[0.14em] hover:text-primary"
         >
           View all →
-        </Link>
+        </button>
       </div>
 
       {transactions.length === 0 ? (

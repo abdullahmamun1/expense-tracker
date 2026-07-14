@@ -3,7 +3,17 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { authApi } from "./api";
 
-type User = { id: string; email: string };
+type User = {
+  id: string;
+  email: string;
+  createdAt: string;
+  firstName: string | null;
+  lastName: string | null;
+  phone: string | null;
+  address: string | null;
+  dateOfBirth: string | null;
+  bio: string | null;
+};
 type Status = "loading" | "authenticated" | "unauthenticated";
 
 type AuthContextValue = {

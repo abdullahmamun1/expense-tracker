@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { transactionsApi, walletsApi, categoriesApi } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,17 +23,33 @@ type View = "list" | "calendar";
 
 const ALL = "all";
 
-export function TransactionList() {
+type TransactionListProps = {
+  autoOpenCreate?: boolean;
+  onAutoOpenHandled?: () => void;
+};
+
+export function TransactionList({ autoOpenCreate, onAutoOpenHandled }: TransactionListProps = {}) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [status, setStatus] = useState<Status>("loading");
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(() => autoOpenCreate ?? false);
   const [editingTransaction, setEditingTransaction] =
     useState<Transaction | null>(null);
   const [walletFilter, setWalletFilter] = useState(ALL);
   const [categoryFilter, setCategoryFilter] = useState(ALL);
   const [view, setView] = useState<View>("list");
+
+  const canCreate = wallets.length > 0 && categories.length > 0;
+  const isCreateFormVisible = showCreateForm && canCreate;
+
+  const didHandleAutoOpen = useRef(false);
+  useEffect(() => {
+    if (autoOpenCreate && !didHandleAutoOpen.current) {
+      didHandleAutoOpen.current = true;
+      onAutoOpenHandled?.();
+    }
+  }, [autoOpenCreate, onAutoOpenHandled]);
 
   const refresh = useCallback(
     async (filters?: { walletId?: string; categoryId?: string }) => {
@@ -120,8 +136,6 @@ export function TransactionList() {
     );
   }
 
-  const canCreate = wallets.length > 0 && categories.length > 0;
-
   return (
     <div className="w-full">
       <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -158,7 +172,7 @@ export function TransactionList() {
               Calendar
             </button>
           </div>
-          {view === "list" && !showCreateForm && canCreate && (
+          {view === "list" && !isCreateFormVisible && canCreate && (
             <Button
               size="sm"
               onClick={() => setShowCreateForm(true)}
@@ -170,7 +184,7 @@ export function TransactionList() {
         </div>
       </div>
 
-      {!canCreate && !showCreateForm && (
+      {!canCreate && (
         <p className="mb-8 border-y border-dashed border-border py-6 text-center font-mono text-xs uppercase tracking-wide text-muted-foreground">
           Add a wallet and a category before logging transactions.
         </p>
@@ -231,7 +245,7 @@ export function TransactionList() {
         />
       ) : (
         <>
-          {showCreateForm && (
+          {isCreateFormVisible && (
             <div className="mb-8">
               <TransactionForm
                 wallets={wallets}
@@ -245,7 +259,7 @@ export function TransactionList() {
             </div>
           )}
 
-          {transactions.length === 0 && !showCreateForm ? (
+          {transactions.length === 0 && !isCreateFormVisible ? (
             <p className="border-y border-dashed border-border py-14 text-center font-serif text-lg text-muted-foreground">
               No transactions yet. Log your first one to start the ledger.
             </p>

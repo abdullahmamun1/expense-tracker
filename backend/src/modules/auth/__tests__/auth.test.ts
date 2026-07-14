@@ -168,7 +168,7 @@ describe("POST /api/auth/login", () => {
 });
 
 describe("GET /api/auth/me", () => {
-  it("returns 200 with only id and email for a valid session cookie", async () => {
+  it("returns 200 with the public user shape for a valid session cookie", async () => {
     const { email, cookie } = await signupAndGetCookie("me-success");
 
     const res = await request(app).get("/api/auth/me").set("Cookie", cookie);
@@ -176,7 +176,11 @@ describe("GET /api/auth/me", () => {
     expect(res.status).toBe(200);
     expect(res.body.email).toBe(email);
     expect(typeof res.body.id).toBe("string");
-    expect(Object.keys(res.body).sort()).toEqual(["email", "id"]);
+    expect(Object.keys(res.body).sort()).toEqual(
+      ["address", "bio", "createdAt", "dateOfBirth", "email", "firstName", "id", "lastName", "phone"].sort()
+    );
+    expect(res.body.firstName).toBeNull();
+    expect(res.body.lastName).toBeNull();
   });
 
   it("returns 401 when no session cookie is sent", async () => {
@@ -199,5 +203,168 @@ describe("POST /api/auth/logout", () => {
   it("returns 401 when no session cookie is sent", async () => {
     const res = await request(app).post("/api/auth/logout");
     expect(res.status).toBe(401);
+  });
+});
+
+describe("PATCH /api/auth/me", () => {
+  it("returns 401 when no session cookie is sent", async () => {
+    const res = await request(app).patch("/api/auth/me").send({ email: uniqueEmail("patch-noauth") });
+    expect(res.status).toBe(401);
+  });
+
+  it("updates the email and returns it in the response", async () => {
+    const { cookie } = await signupAndGetCookie("patch-email-success");
+    const newEmail = uniqueEmail("patch-email-success-new");
+
+    const res = await request(app).patch("/api/auth/me").set("Cookie", cookie).send({ email: newEmail });
+
+    expect(res.status).toBe(200);
+    expect(res.body.email).toBe(newEmail);
+
+    const dbUser = await prisma.user.findUnique({ where: { email: newEmail } });
+    expect(dbUser).not.toBeNull();
+  });
+
+  it("returns 409 when the new email is already registered to another user and does not change the row", async () => {
+    const { email: takenEmail } = await signupAndGetCookie("patch-email-taken");
+    const { cookie, email: originalEmail } = await signupAndGetCookie("patch-email-conflict");
+
+    const res = await request(app).patch("/api/auth/me").set("Cookie", cookie).send({ email: takenEmail });
+
+    expect(res.status).toBe(409);
+
+    const dbUser = await prisma.user.findUnique({ where: { email: originalEmail } });
+    expect(dbUser).not.toBeNull();
+  });
+
+  it("updates the password when currentPassword is correct, and the old password stops working", async () => {
+    const { email, password, cookie } = await signupAndGetCookie("patch-password-success");
+    const newPassword = "new-correct-horse-battery";
+
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ newPassword, currentPassword: password });
+    expect(res.status).toBe(200);
+
+    const loginWithNew = await request(app).post("/api/auth/login").send({ email, password: newPassword });
+    expect(loginWithNew.status).toBe(200);
+
+    const loginWithOld = await request(app).post("/api/auth/login").send({ email, password });
+    expect(loginWithOld.status).toBe(401);
+  });
+
+  it("returns 401 when currentPassword is incorrect and leaves the password unchanged", async () => {
+    const { email, password, cookie } = await signupAndGetCookie("patch-password-wrong-current");
+
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ newPassword: "new-correct-horse-battery", currentPassword: "totally-wrong" });
+    expect(res.status).toBe(401);
+
+    const loginWithOld = await request(app).post("/api/auth/login").send({ email, password });
+    expect(loginWithOld.status).toBe(200);
+  });
+
+  it("does not leak passwordHash in the response body", async () => {
+    const { cookie } = await signupAndGetCookie("patch-no-leak");
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ email: uniqueEmail("patch-no-leak-new") });
+
+    expect(res.body).not.toHaveProperty("passwordHash");
+  });
+
+  it("updates personal-info fields (name, phone, address, dateOfBirth, bio) without requiring a password", async () => {
+    const { cookie } = await signupAndGetCookie("patch-personal-info");
+
+    const res = await request(app).patch("/api/auth/me").set("Cookie", cookie).send({
+      firstName: "Ada",
+      lastName: "Lovelace",
+      phone: "+1 555-0100",
+      address: "12 Analytical Engine Way",
+      dateOfBirth: "1815-12-10",
+      bio: "Mathematician and writer.",
+    });
+
+    expect(res.status).toBe(200);
+    expect(res.body.firstName).toBe("Ada");
+    expect(res.body.lastName).toBe("Lovelace");
+    expect(res.body.phone).toBe("+1 555-0100");
+    expect(res.body.address).toBe("12 Analytical Engine Way");
+    expect(res.body.dateOfBirth).toContain("1815-12-10");
+    expect(res.body.bio).toBe("Mathematician and writer.");
+  });
+
+  it("clears a personal-info field when sent as an empty string", async () => {
+    const { cookie } = await signupAndGetCookie("patch-clear-field");
+
+    await request(app).patch("/api/auth/me").set("Cookie", cookie).send({ lastName: "Lovelace" });
+    const res = await request(app).patch("/api/auth/me").set("Cookie", cookie).send({ lastName: "" });
+
+    expect(res.status).toBe(200);
+    expect(res.body.lastName).toBeNull();
+  });
+
+  it("returns 400 for an invalid phone number", async () => {
+    const { cookie } = await signupAndGetCookie("patch-invalid-phone");
+    const res = await request(app)
+      .patch("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ phone: "not-a-phone-number!!" });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 when no fields are provided", async () => {
+    const { cookie } = await signupAndGetCookie("patch-empty-body");
+    const res = await request(app).patch("/api/auth/me").set("Cookie", cookie).send({});
+    expect(res.status).toBe(400);
+  });
+});
+
+describe("DELETE /api/auth/me", () => {
+  it("returns 401 when no session cookie is sent", async () => {
+    const res = await request(app).delete("/api/auth/me").send({ currentPassword: "whatever" });
+    expect(res.status).toBe(401);
+  });
+
+  it("returns 401 for an incorrect currentPassword and leaves the account intact", async () => {
+    const { email, cookie } = await signupAndGetCookie("delete-wrong-password");
+
+    const res = await request(app)
+      .delete("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ currentPassword: "totally-wrong" });
+    expect(res.status).toBe(401);
+
+    const dbUser = await prisma.user.findUnique({ where: { email } });
+    expect(dbUser).not.toBeNull();
+  });
+
+  it("deletes the account, destroys the session, and cascades owned data", async () => {
+    const { email, password, cookie } = await signupAndGetCookie("delete-success");
+    const signupRes = await request(app).get("/api/auth/me").set("Cookie", cookie);
+    const userId = signupRes.body.id as string;
+
+    await prisma.wallet.create({
+      data: { userId, name: "Cash", type: "CASH", startingBalance: "0" },
+    });
+
+    const deleteRes = await request(app)
+      .delete("/api/auth/me")
+      .set("Cookie", cookie)
+      .send({ currentPassword: password });
+    expect(deleteRes.status).toBe(204);
+
+    const meRes = await request(app).get("/api/auth/me").set("Cookie", cookie);
+    expect(meRes.status).toBe(401);
+
+    const dbUser = await prisma.user.findUnique({ where: { email } });
+    expect(dbUser).toBeNull();
+
+    const walletCount = await prisma.wallet.count({ where: { userId } });
+    expect(walletCount).toBe(0);
   });
 });

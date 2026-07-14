@@ -9,10 +9,10 @@ export function HeroCta() {
   if (status === "authenticated") {
     return (
       <Link
-        href="/wallets"
+        href="/dashboard"
         className="flex h-12 items-center justify-center px-2 font-mono text-sm text-muted-foreground underline decoration-border decoration-1 underline-offset-8 transition-colors hover:text-primary hover:decoration-primary"
       >
-        Logged in as {user?.email} — go to your wallets
+        Logged in as {user?.email} — go to your dashboard
       </Link>
     );
   }

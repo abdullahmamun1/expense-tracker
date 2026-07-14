@@ -3,13 +3,19 @@
 import { useCallback, useEffect, useState } from "react";
 import { dashboardApi } from "@/lib/api";
 import type { DashboardSummary as DashboardSummaryData } from "@/lib/validation/dashboard";
+import { Button } from "@/components/ui/button";
 import { StatCard } from "./stat-card";
 import { CategoryBreakdown } from "./category-breakdown";
 import { RecentTransactions } from "./recent-transactions";
 
 type Status = "loading" | "ready" | "error";
 
-export function DashboardSummary() {
+type DashboardSummaryProps = {
+  onViewAllTransactions: () => void;
+  onAddTransaction: () => void;
+};
+
+export function DashboardSummary({ onViewAllTransactions, onAddTransaction }: DashboardSummaryProps) {
   const [summary, setSummary] = useState<DashboardSummaryData | null>(null);
   const [status, setStatus] = useState<Status>("loading");
 
@@ -49,6 +55,15 @@ export function DashboardSummary() {
 
   return (
     <div className="w-full">
+      <div className="mb-6 flex justify-end">
+        <Button
+          onClick={onAddTransaction}
+          className="h-10 gap-1.5 rounded-none px-5 font-mono text-xs uppercase tracking-[0.14em]"
+        >
+          + Add transaction
+        </Button>
+      </div>
+
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <StatCard label="Net worth" value={summary.netWorth} />
         <StatCard label="Income this month" value={summary.month.income} tone="income" />
@@ -60,7 +75,10 @@ export function DashboardSummary() {
       </div>
 
       <div className="mt-12">
-        <RecentTransactions transactions={summary.recentTransactions} />
+        <RecentTransactions
+          transactions={summary.recentTransactions}
+          onViewAll={onViewAllTransactions}
+        />
       </div>
     </div>
   );

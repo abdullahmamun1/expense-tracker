@@ -11,6 +11,12 @@ model User {
   id           String        @id @default(cuid())
   email        String        @unique
   passwordHash String
+  firstName    String?
+  lastName     String?
+  phone        String?
+  address      String?
+  dateOfBirth  DateTime?     @db.Date
+  bio          String?
   createdAt    DateTime      @default(now())
   wallets      Wallet[]
   categories   Category[]
