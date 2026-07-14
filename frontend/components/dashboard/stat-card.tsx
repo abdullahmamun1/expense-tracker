@@ -5,9 +5,10 @@ type StatCardProps = {
   label: string;
   value: string;
   tone?: "income" | "expense";
+  unit?: "currency" | "none";
 };
 
-export function StatCard({ label, value, tone }: StatCardProps) {
+export function StatCard({ label, value, tone, unit = "currency" }: StatCardProps) {
   return (
     <Card className="rounded-none border border-border bg-card/60 shadow-none ring-0">
       <CardContent>
@@ -21,7 +22,7 @@ export function StatCard({ label, value, tone }: StatCardProps) {
             tone === "expense" && "text-destructive"
           )}
         >
-          ${value}
+          {unit === "none" ? value : `$${value}`}
         </p>
       </CardContent>
     </Card>

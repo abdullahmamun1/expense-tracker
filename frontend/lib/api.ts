@@ -88,6 +88,21 @@ export const dashboardApi = {
   summary: () => apiFetch("/api/dashboard/summary"),
 };
 
+function reportsRangeQuery(from?: string, to?: string) {
+  const params = new URLSearchParams();
+  if (from) params.set("from", from);
+  if (to) params.set("to", to);
+  const qs = params.toString();
+  return qs ? `?${qs}` : "";
+}
+
+export const reportsApi = {
+  summary: (from?: string, to?: string) =>
+    apiFetch(`/api/reports/summary${reportsRangeQuery(from, to)}`),
+  exportCsv: (from?: string, to?: string) =>
+    apiFetch(`/api/reports/export${reportsRangeQuery(from, to)}`),
+};
+
 export const budgetsApi = {
   list: () => apiFetch("/api/budgets"),
   create: (data: { categoryId: string; monthlyLimit: string }) =>

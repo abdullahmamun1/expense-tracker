@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { LayoutGrid, Wallet, Tag, Receipt, PiggyBank } from "lucide-react";
+import { LayoutGrid, Wallet, Tag, Receipt, PiggyBank, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DashboardSummary } from "./dashboard-summary";
 import { WalletList } from "@/components/wallets/wallet-list";
 import { CategoryList } from "@/components/categories/category-list";
 import { TransactionList } from "@/components/transactions/transaction-list";
 import { BudgetList } from "@/components/budgets/budget-list";
+import { ReportsPanel } from "@/components/reports/reports-panel";
 
 const tabs = [
   { key: "overview", label: "Overview", icon: LayoutGrid },
@@ -15,6 +16,7 @@ const tabs = [
   { key: "categories", label: "Categories", icon: Tag },
   { key: "transactions", label: "Transactions", icon: Receipt },
   { key: "budgets", label: "Budgets", icon: PiggyBank },
+  { key: "reports", label: "Reports", icon: BarChart3 },
 ] as const;
 
 type TabKey = (typeof tabs)[number]["key"];
@@ -63,6 +65,7 @@ export function DashboardTabs() {
         {active === "budgets" && (
           <BudgetList onNavigateToCategories={() => setActive("categories")} />
         )}
+        {active === "reports" && <ReportsPanel />}
       </div>
     </div>
   );
